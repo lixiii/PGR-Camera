@@ -37,15 +37,16 @@ def setExposure(absValue=1):
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.AUTO_EXPOSURE, autoManualMode = False, absValue = absValue)
 
 
-def capture(display = True, saveRaw = False, saveColorImage = False, saveGreyscaleImage = False):
+def capture(display = True, saveRaw = False, saveColorImage = False, saveGreyscaleImage = False, 
+            rawImgName = "raw.png", colorImgName = "color.png", greyImgName="grey.png"):
     """
         This function captures an image and optionally displays the image using openCV.
 
-        If saveRaw is set to True, the raw image is saved to "raw.png"
+        If saveRaw is set to True, the raw image is saved to "raw.png" (default file name)
 
-        If saveColorImage is set to True, the color image is saved to "color.png"
+        If saveColorImage is set to True, the color image is saved to "color.png" (default file name)
 
-        If saveGreyscaleImage is set to True, the color image is converted into greyscale using OpenCV and saved to "grey.png"
+        If saveGreyscaleImage is set to True, the color image is converted into greyscale using OpenCV and saved to "grey.png" (default file name)
 
         An CV2 image is returned by the function.
     """
@@ -66,16 +67,16 @@ def capture(display = True, saveRaw = False, saveColorImage = False, saveGreysca
 
         # saving images with opencv
         if saveColorImage:
-            cv2.imwrite("color.png", cvBgrImg)
+            cv2.imwrite(colorImgName, cvBgrImg)
 
         if saveGreyscaleImage:
             # convert to greyscale using opencv library
             cvGreyImg = cv2.cvtColor(cvBgrImg, cv2.COLOR_RGB2GRAY)
-            cv2.imwrite("grey.png", cvGreyImg)
+            cv2.imwrite(greyImgName, cvGreyImg)
 
         # saving raw image
         if saveRaw:
-            rawImg.save("raw.png".encode("utf-8"), PyCapture2.IMAGE_FILE_FORMAT.PNG)
+            rawImg.save(rawImgName.encode("utf-8"), PyCapture2.IMAGE_FILE_FORMAT.PNG)
         
         return cvBgrImg
     except PyCapture2.Fc2error as fc2Err:
