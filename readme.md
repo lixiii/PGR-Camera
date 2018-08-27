@@ -1,5 +1,7 @@
 # Point Grey Research Camera Module
 
+This is a Python3 library to control Point Grey Research Cameras.
+
 ## Dependencies
 
 - PyCapture2
