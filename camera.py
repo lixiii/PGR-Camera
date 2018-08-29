@@ -6,6 +6,7 @@ import cv2
 # Connection to camera
 bus = PyCapture2.BusManager()
 cam = PyCapture2.Camera()
+camInitialised = False
 
 def printNumOfCam():
     """ returns the number of cameras """
@@ -19,10 +20,12 @@ def init( camIndex=0 ):
         This function initialises the connection with camera with an index specified by the camIndex parameter and starts the capture process
         WARNING: After init() is called, the camera must be properly closed using .close() method
     """
+    global camInitialised
     print("Initialising connection to camera ", camIndex)
     cam.connect(bus.getCameraFromIndex( camIndex ))
     __printCameraInfo__(cam)
     cam.startCapture()
+    camInitialised = True
 
 def setShutter(absValue = 60):
     """ This function sets the shutter value of the camera to manual mode with the specified value"""
@@ -37,10 +40,12 @@ def setExposure(absValue=1):
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.AUTO_EXPOSURE, autoManualMode = False, absValue = absValue)
 
 
-def capture(display = True, saveRaw = False, saveColorImage = False, saveGreyscaleImage = False, 
+def capture(display = True, returnGreyImage = False, saveRaw = False, saveColorImage = False, saveGreyscaleImage = False, 
             rawImgName = "raw.png", colorImgName = "color.png", greyImgName="grey.png"):
     """
         This function captures an image and optionally displays the image using openCV.
+
+        If returnGreyImage is set to True, the returned cv2 image will be the image after greyscale conversion. 
 
         If saveRaw is set to True, the raw image is saved to "raw.png" (default file name)
 
@@ -50,6 +55,8 @@ def capture(display = True, saveRaw = False, saveColorImage = False, saveGreysca
 
         An CV2 image is returned by the function.
     """
+    if not camInitialised:
+        raise RuntimeError("Camera not initialised. Please intialise with init() method")
     try:
         # try retrieving the last image from the camera
         rawImg = cam.retrieveBuffer()
@@ -69,25 +76,50 @@ def capture(display = True, saveRaw = False, saveColorImage = False, saveGreysca
         if saveColorImage:
             cv2.imwrite(colorImgName, cvBgrImg)
 
-        if saveGreyscaleImage:
+        if saveGreyscaleImage or returnGreyImage:
             # convert to greyscale using opencv library
             cvGreyImg = cv2.cvtColor(cvBgrImg, cv2.COLOR_RGB2GRAY)
-            cv2.imwrite(greyImgName, cvGreyImg)
+
+            if saveGreyscaleImage:
+                cv2.imwrite(greyImgName, cvGreyImg)
 
         # saving raw image
         if saveRaw:
             rawImg.save(rawImgName.encode("utf-8"), PyCapture2.IMAGE_FILE_FORMAT.PNG)
         
-        return cvBgrImg
+        if returnGreyImage:
+            return cvGreyImg
+        else:
+            return cvBgrImg
     except PyCapture2.Fc2error as fc2Err:
         print("Error retrieving buffer : ", fc2Err)
         raise RuntimeError("Error retrieving buffer : ", fc2Err)
  
+def isSaturated(greyConversion = False, findIndices = False):
+    """
+        This function captures an image and checks all the pixels to see if any pixel is saturated. 
+        
+        If greyConversion is True, this function converts the image into a greyscale image and checks for saturation using the greyscale image. 
 
+        If findIndices is set to True, a tuple indicating the first saturated pixel is also returned if the image is saturated. 
+    """
+    if not camInitialised:
+        raise RuntimeError("Camera not initialised. Please intialise with init() method")
+    img = capture( False, greyConversion )
+    if np.amax( img ) == 255:
+        if findIndices:
+            indices = np.unravel_index(np.argmax(img, axis=None), img.shape)
+            return True, indices
+        else:
+            return True
+    else:
+        return False
 
 
 def close():
     """ This function closes the camera connection and stops image capture"""
+    global camInitialised
+    camInitialised = False
     cam.stopCapture()
     cam.disconnect()
 
