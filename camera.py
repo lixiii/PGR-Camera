@@ -138,13 +138,17 @@ def isSaturated(greyConversion = False, findIndices = False):
     else:
         return False
 
-def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True):
+def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, gainOffset = 0, initShutterOffset = 0):
     """
         This function automatically adjusts the shutter to a level where the brightest pixel is just below saturation. 
         Iteration variables: 
         MaxIteration    - maximum iteration limit
         stepSize        - the step size to decrease the shutter value
         verbose         - prints the iteration progress
+        gainOffset      - The gain is set by the camera's auto adjustment and to achieve a higher dynamic range, a lower gain is usually desired. 
+                            Hence, set the offset to a small value like 0.5 --- 5 if the dynamic range is not sufficient or if the adjustment fails. 
+                            This is a negative offset, ie the programme reduces this amount from the initGain value
+        initShutterOfffet - To account for the gain offset, the starting shutter needs to be larger and hence this is a positive offset. 
     """
     if not camInitialised:
         raise RuntimeError("Camera not initialised. Please intialise with init() method")
@@ -152,13 +156,15 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True):
         print("enabling auto adjustment mode and waiting for camera to adjust settings")
     autoAdjust()
     time.sleep(2)
-    initGain = getGainValue()
-    initShutter = getShutterValue()
+    initGain = getGainValue() - gainOffset
+    setGain(initGain)
+    time.sleep(1) # wait for readjustment as gain is set
+    initShutter = getShutterValue() + initShutterOffset
+    if verbose:
+        print("Camera adjustment completed. Disabling the auto adjustment modes. \nCurrent gain = " + str(initGain) + " and shutter = " + str(initShutter))
 
     shutterValue = initShutter
     setShutter(initShutter)
-    gainValue = initGain
-    setGain(gainValue)
 
     for i in range(maxIteration):
         sat = isSaturated()
