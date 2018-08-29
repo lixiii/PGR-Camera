@@ -2,11 +2,16 @@
 import PyCapture2
 import numpy as np
 import cv2 
+import time
 
 # Connection to camera
 bus = PyCapture2.BusManager()
 cam = PyCapture2.Camera()
 camInitialised = False
+
+# debug output
+__DEBUG__ = False
+# __DEBUG__ = True
 
 def printNumOfCam():
     """ returns the number of cameras """
@@ -39,6 +44,19 @@ def setExposure(absValue=1):
     """ This function sets the exposure of the camera to manual mode with a specified value"""
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.AUTO_EXPOSURE, autoManualMode = False, absValue = absValue)
 
+def autoAdjust():
+    """ Set the camera to auto mode for all settings """
+    cam.setProperty(type = PyCapture2.PROPERTY_TYPE.AUTO_EXPOSURE, autoManualMode = True)
+    cam.setProperty(type = PyCapture2.PROPERTY_TYPE.GAIN, autoManualMode = True)
+    cam.setProperty(type = PyCapture2.PROPERTY_TYPE.SHUTTER, autoManualMode = True)
+
+def getShutterValue():
+    """ Returns the current shutter value """
+    return cam.getProperty( PyCapture2.PROPERTY_TYPE.SHUTTER ).absValue
+
+def getGainValue():
+    """ Returns the current gain value """
+    return cam.getProperty( PyCapture2.PROPERTY_TYPE.GAIN ).absValue
 
 def capture(display = True, returnGreyImage = False, saveRaw = False, saveColorImage = False, saveGreyscaleImage = False, 
             rawImgName = "raw.png", colorImgName = "color.png", greyImgName="grey.png"):
@@ -106,6 +124,11 @@ def isSaturated(greyConversion = False, findIndices = False):
     if not camInitialised:
         raise RuntimeError("Camera not initialised. Please intialise with init() method")
     img = capture( False, greyConversion )
+    # smooth the image over kernal of (3,3)
+    img = cv2.blur(img, (3, 3))
+    if __DEBUG__:
+        cv2.imshow("blurred", img)
+        cv2.waitKey(500)
     if np.amax( img ) == 255:
         if findIndices:
             indices = np.unravel_index(np.argmax(img, axis=None), img.shape)
@@ -114,6 +137,43 @@ def isSaturated(greyConversion = False, findIndices = False):
             return True
     else:
         return False
+
+def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True):
+    """
+        This function automatically adjusts the shutter to a level where the brightest pixel is just below saturation. 
+        Iteration variables: 
+        MaxIteration    - maximum iteration limit
+        stepSize        - the step size to decrease the shutter value
+        verbose         - prints the iteration progress
+    """
+    if not camInitialised:
+        raise RuntimeError("Camera not initialised. Please intialise with init() method")
+    if verbose:
+        print("enabling auto adjustment mode and waiting for camera to adjust settings")
+    autoAdjust()
+    time.sleep(2)
+    initGain = getGainValue()
+    initShutter = getShutterValue()
+
+    shutterValue = initShutter
+    setShutter(initShutter)
+    gainValue = initGain
+    setGain(gainValue)
+
+    for i in range(maxIteration):
+        sat = isSaturated()
+        if sat:
+            shutterValue = shutterValue - stepSize
+            if shutterValue <= 0:
+                raise RuntimeError("Shutter value has exceeded minimum possible value.")
+                break
+            setShutter( shutterValue )
+            printIterationStatus(i + 1, shutterValue, sat, verbose)
+        else:
+            printIterationStatus(i + 1, shutterValue, sat, verbose)
+            break
+    
+    return sat
 
 
 def close():
@@ -138,3 +198,10 @@ def __printCameraInfo__(cam):
 	print("Firmware version - ", camInfo.firmwareVersion)
 	print("Firmware build time - ", camInfo.firmwareBuildTime)
 	print()
+
+
+def printIterationStatus(itCount, shutterValue, sat, verbose):
+    if verbose:
+        print("-------------------------------")
+        print("Iteration " + str(itCount) + " :")
+        print("Shutter: " + str(shutterValue) + " , Saturated: " + str(sat))
