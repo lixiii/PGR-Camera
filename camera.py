@@ -31,7 +31,7 @@ def setShutter(absValue = 60):
     """ This function sets the shutter value of the camera to manual mode with the specified value"""
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.SHUTTER, autoManualMode = False, absValue = absValue)
 
-def setGain(absBalue = 15):
+def setGain(absValue = 15):
     """ This function sets the gain of the camera to manual mode with a specified value"""
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.GAIN, autoManualMode = False, absValue = absValue)
 
