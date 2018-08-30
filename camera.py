@@ -35,20 +35,29 @@ def init( camIndex=0 ):
 def setShutter(absValue = 60):
     """ This function sets the shutter value of the camera to manual mode with the specified value"""
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.SHUTTER, autoManualMode = False, absValue = absValue)
+    return getShutterValue()
 
 def setGain(absValue = 15):
     """ This function sets the gain of the camera to manual mode with a specified value"""
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.GAIN, autoManualMode = False, absValue = absValue)
+    return getGainValue()
 
 def setExposure(absValue=1):
     """ This function sets the exposure of the camera to manual mode with a specified value"""
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.AUTO_EXPOSURE, autoManualMode = False, absValue = absValue)
+    return cam.getProperty( PyCapture2.PROPERTY_TYPE.AUTO_EXPOSURE ).absValue
+
+def setFramerate(absValue=30):
+    """ This function sets the framrate and returns the value from the camera as it will not be exact """
+    cam.setProperty(type = PyCapture2.PROPERTY_TYPE.FRAME_RATE, autoManualMode = False, absValue = absValue)
+    return getFramerate()
 
 def autoAdjust():
     """ Set the camera to auto mode for all settings """
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.AUTO_EXPOSURE, autoManualMode = True)
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.GAIN, autoManualMode = True)
     cam.setProperty(type = PyCapture2.PROPERTY_TYPE.SHUTTER, autoManualMode = True)
+    cam.setProperty(type = PyCapture2.PROPERTY_TYPE.FRAME_RATE, autoManualMode = True)
 
 def getShutterValue():
     """ Returns the current shutter value """
@@ -57,6 +66,9 @@ def getShutterValue():
 def getGainValue():
     """ Returns the current gain value """
     return cam.getProperty( PyCapture2.PROPERTY_TYPE.GAIN ).absValue
+
+def getFramerate():
+    return cam.getProperty( PyCapture2.PROPERTY_TYPE.FRAME_RATE ).absValue
 
 def capture(display = True, returnGreyImage = False, saveRaw = False, saveColorImage = False, saveGreyscaleImage = False, 
             rawImgName = "raw.png", colorImgName = "color.png", greyImgName="grey.png"):
@@ -180,7 +192,7 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, gainOffset = 
             break
     
     return sat
-
+ 
 
 def close():
     """ This function closes the camera connection and stops image capture"""

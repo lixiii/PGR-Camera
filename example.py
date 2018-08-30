@@ -4,4 +4,8 @@ camera.printNumOfCam()
 camera.init(0)
 camera.capture()
 print("Checking if the image is saturated. Saturation status: " + str( camera.isSaturated( False, True ) ) )
+
+camera.setFramerate(30)
 camera.close()
+
+camera.PyCapture2.MODE
