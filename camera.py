@@ -194,15 +194,31 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, gainOffset = 
     return sat
  
 
+def captureAverage( frameCount = 10, display=False, greyScale = False ):
+    """
+        This function captures the specified number of frames and averages them as they are captured. 
+        If display = True, the final averaged image is displayed. 
+        If greyScale = True, greyscale images will be used.
+    """
+    img = capture(False, returnGreyImage =  greyScale)
+    for i in range(frameCount):
+        tempImg = capture(False, returnGreyImage =  greyScale)
+        img = cv2.addWeighted(img, 0.5, tempImg, 0.5, 0)
+        if __DEBUG__:
+            cv2.imshow(str(i), tempImg)
+            cv2.imshow("img"+str(i), img)
+
+    if display:
+        cv2.imshow("Averaged over " + str(frameCount) + " frames",img)
+        cv2.waitKey()
+    return img
+
 def close():
     """ This function closes the camera connection and stops image capture"""
     global camInitialised
     camInitialised = False
     cam.stopCapture()
     cam.disconnect()
-
-
-
 
 # Helper functions
 def __printCameraInfo__(cam):
