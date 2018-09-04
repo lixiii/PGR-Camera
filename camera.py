@@ -183,7 +183,7 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, gainOffset = 
         if sat:
             shutterValue = shutterValue - stepSize
             if shutterValue <= 0:
-                raise RuntimeError("Shutter value has exceeded minimum possible value.")
+                raise RuntimeError("Shutter value has exceeded minimum possible value. You can retry with a smaller step size. ")
                 break
             setShutter( shutterValue )
             printIterationStatus(i + 1, shutterValue, sat, verbose)
