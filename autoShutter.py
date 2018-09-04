@@ -3,7 +3,7 @@
 import camera as cam
 
 cam.init()
-cam.adjustShutter(gainOffset=2)
+cam.autoAdjustShutter()
 
 # Finally
 cam.capture()

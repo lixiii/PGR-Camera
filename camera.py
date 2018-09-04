@@ -150,13 +150,16 @@ def isSaturated(greyConversion = False, findIndices = False):
     else:
         return False
 
-def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, gainOffset = 0, initShutterOffset = 0):
+def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, camAutoAdjust = True, gainOffset = 0, initShutterOffset = 0):
     """
         This function automatically adjusts the shutter to a level where the brightest pixel is just below saturation. 
+
         Iteration variables: 
         MaxIteration    - maximum iteration limit
         stepSize        - the step size to decrease the shutter value
         verbose         - prints the iteration progress
+        camAutoAdjust      - If this is set to false, the routine will NOT use auto adjustment at the start. Change this to false only when you know 
+                            what you are doing
         gainOffset      - The gain is set by the camera's auto adjustment and to achieve a higher dynamic range, a lower gain is usually desired. 
                             Hence, set the offset to a small value like 0.5 --- 5 if the dynamic range is not sufficient or if the adjustment fails. 
                             This is a negative offset, ie the programme reduces this amount from the initGain value
@@ -164,10 +167,12 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, gainOffset = 
     """
     if not camInitialised:
         raise RuntimeError("Camera not initialised. Please intialise with init() method")
-    if verbose:
-        print("enabling auto adjustment mode and waiting for camera to adjust settings")
-    autoAdjust()
-    time.sleep(2)
+    if camAutoAdjust:
+        if verbose:
+            print("enabling auto adjustment mode and waiting for camera to adjust settings")
+        autoAdjust()
+        time.sleep(2)
+
     initGain = getGainValue() - gainOffset
     setGain(initGain)
     time.sleep(1) # wait for readjustment as gain is set
@@ -193,6 +198,46 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, gainOffset = 
     
     return sat
  
+def autoAdjustShutter(iterationLimit = 100, verbose = True):
+    """
+        This function calls the iteration routine adjustShutter automatically and changes the gain and iteration variables until a maximum iteration limit OR until saturation = False
+        iterationLimit refers to the maximum iteration steps.
+    """
+    i = 0
+    # Each adjustShutter call takes 10 maximum steps
+    adjustLimit = iterationLimit / 10
+    # get most negative gain    
+    minGain = setGain(1)
+    for testGain in range(0, -10, -1):
+        current = setGain(testGain)
+        if current < minGain:
+            minGain = current
+    if not camInitialised:
+        raise RuntimeError("Camera not initialised. Please intialise with init() method")
+    if verbose:
+        print("enabling auto adjustment mode and waiting for camera to adjust settings")
+        print("Camera minimum gain = " + str(minGain) )
+    autoAdjust()
+    time.sleep(2)
+    initGain = getGainValue()
+    initShutter = getShutterValue()
+    gainStep = (initGain - minGain) / 10
+
+    while i < adjustLimit:
+        i = i + 1
+        newGain = setGain(initGain - gainStep * i)
+        if verbose:
+            print("Trying another iteration with gain: " + str( newGain ))
+        step = ( setShutter(initShutter) - 0.001 )/ 10
+        sat = adjustShutter(10, step, verbose, False)
+        if sat == False:
+            return False
+    
+    if sat:
+        raise RuntimeWarning("Shutter optimisation failed. Try with larger limit.")
+    return sat
+
+
 
 def captureAverage( frameCount = 10, display=False, greyScale = False ):
     """
