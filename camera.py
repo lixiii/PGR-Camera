@@ -4,6 +4,9 @@ import numpy as np
 import cv2 
 import time
 
+# Configurations: 
+_PIXEL_FORMAT = PyCapture2.PIXEL_FORMAT.RAW16
+
 # Connection to camera
 bus = PyCapture2.BusManager()
 cam = PyCapture2.Camera()
@@ -29,6 +32,20 @@ def init( camIndex=0 ):
     print("Initialising connection to camera ", camIndex)
     cam.connect(bus.getCameraFromIndex( camIndex ))
     __printCameraInfo__(cam)
+    # set the format to RAW16 using format 7
+    fmt7info, supported = cam.getFormat7Info(0)
+    global _PIXEL_FORMAT
+    # Check whether pixel format _PIXEL_FORMAT is supported
+    if _PIXEL_FORMAT & fmt7info.pixelFormatBitField == 0:
+        print("Pixel format is not supported\n")
+        exit()
+    fmt7imgSet = PyCapture2.Format7ImageSettings(0, 0, 0, fmt7info.maxWidth, fmt7info.maxHeight, _PIXEL_FORMAT)
+    fmt7pktInf, isValid = cam.validateFormat7Settings(fmt7imgSet)
+    if not isValid:
+        print("Format7 settings are not valid!")
+        exit()
+    cam.setFormat7ConfigurationPacket(fmt7pktInf.recommendedBytesPerPacket, fmt7imgSet)
+    
     cam.startCapture()
     camInitialised = True
 
@@ -91,12 +108,12 @@ def capture(display = True, returnGreyImage = False, saveRaw = False, saveColorI
         # try retrieving the last image from the camera
         rawImg = cam.retrieveBuffer()
         
-        bgrImg = rawImg.convert(PyCapture2.PIXEL_FORMAT.BGR)
+        bgrImg = rawImg.convert(_PIXEL_FORMAT)
         # hack for Python3 save the image first and the load it in openCV because the img.getData() method does not work for 
         # the converted image
         bgrImg.save("temp.png".encode(),  PyCapture2.IMAGE_FILE_FORMAT.PNG)
 
-        cvBgrImg = cv2.imread("temp.png")
+        cvBgrImg = cv2.imread("temp.png",-1) # -1 for no conversion to 8 bits
 
         if display:
             cv2.imshow('BGR image',cvBgrImg)
@@ -141,7 +158,15 @@ def isSaturated(greyConversion = False, findIndices = False):
     if __DEBUG__:
         cv2.imshow("blurred", img)
         cv2.waitKey(500)
-    if np.amax( img ) == 255:
+    
+    # then check the image pixel bit size:
+    if img.dtype.itemsize == 2:
+        PIX_MAX = 65535
+    elif img.dtype.itemsize == 1:
+        PIX_MAX = 255
+    else:
+        raise RuntimeError("Pixel size not supported. Please add pixel max. ")
+    if np.amax( img ) == PIX_MAX:
         if findIndices:
             indices = np.unravel_index(np.argmax(img, axis=None), img.shape)
             return True, indices
