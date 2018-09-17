@@ -13,8 +13,8 @@ cam = PyCapture2.Camera()
 camInitialised = False
 
 # debug output
-__DEBUG__ = False
-# __DEBUG__ = True
+# __DEBUG__ = False
+__DEBUG__ = True
 
 def printNumOfCam():
     """ returns the number of cameras """
@@ -37,13 +37,11 @@ def init( camIndex=0 ):
     global _PIXEL_FORMAT
     # Check whether pixel format _PIXEL_FORMAT is supported
     if _PIXEL_FORMAT & fmt7info.pixelFormatBitField == 0:
-        print("Pixel format is not supported\n")
-        exit()
+        raise RuntimeError("Pixel format is not supported\n")
     fmt7imgSet = PyCapture2.Format7ImageSettings(0, 0, 0, fmt7info.maxWidth, fmt7info.maxHeight, _PIXEL_FORMAT)
     fmt7pktInf, isValid = cam.validateFormat7Settings(fmt7imgSet)
     if not isValid:
-        print("Format7 settings are not valid!")
-        exit()
+        raise RuntimeError("Format7 settings are not valid!")
     cam.setFormat7ConfigurationPacket(fmt7pktInf.recommendedBytesPerPacket, fmt7imgSet)
     
     cam.startCapture()
@@ -108,7 +106,7 @@ def capture(display = True, returnGreyImage = False, saveRaw = False, saveColorI
         # try retrieving the last image from the camera
         rawImg = cam.retrieveBuffer()
         
-        bgrImg = rawImg.convert(_PIXEL_FORMAT)
+        bgrImg = rawImg.convert(PyCapture2.PIXEL_FORMAT.BGR16)
         # hack for Python3 save the image first and the load it in openCV because the img.getData() method does not work for 
         # the converted image
         bgrImg.save("temp.png".encode(),  PyCapture2.IMAGE_FILE_FORMAT.PNG)
