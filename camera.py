@@ -13,8 +13,8 @@ cam = PyCapture2.Camera()
 camInitialised = False
 
 # debug output
-# __DEBUG__ = False
-__DEBUG__ = True
+__DEBUG__ = False
+# __DEBUG__ = True
 
 def printNumOfCam():
     """ returns the number of cameras """
@@ -43,6 +43,7 @@ def init( camIndex=0 ):
     if not isValid:
         raise RuntimeError("Format7 settings are not valid!")
     cam.setFormat7ConfigurationPacket(fmt7pktInf.recommendedBytesPerPacket, fmt7imgSet)
+    cam.setConfiguration(grabMode = PyCapture2.GRAB_MODE.DROP_FRAMES)
     
     cam.startCapture()
     camInitialised = True
@@ -150,6 +151,7 @@ def isSaturated(greyConversion = False, findIndices = False):
     """
     if not camInitialised:
         raise RuntimeError("Camera not initialised. Please intialise with init() method")
+    cam.retrieveBuffer() # Clear the latest image before the settings are updated
     img = capture( False, greyConversion )
     # smooth the image over kernal of (3,3)
     img = cv2.blur(img, (3, 3))
@@ -214,6 +216,7 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, camAutoAdjust
                 raise RuntimeError("Shutter value has exceeded minimum possible value. You can retry with a smaller step size. ")
                 break
             setShutter( shutterValue )
+            # Allow shutter settings to change
             printIterationStatus(i + 1, shutterValue, sat, verbose)
         else:
             printIterationStatus(i + 1, shutterValue, sat, verbose)
@@ -243,7 +246,7 @@ def autoAdjustShutter(iterationLimit = 100, verbose = True):
     autoAdjust()
     time.sleep(2)
     initGain = getGainValue()
-    initShutter = getShutterValue()
+    initShutter = getShutterValue() * 0.7 # scale down a bit
     gainStep = (initGain - minGain) / 10
 
     while i < adjustLimit:
