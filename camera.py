@@ -117,6 +117,7 @@ def capture(display = True, returnGreyImage = False, saveRaw = False, saveColorI
         if display:
             cv2.imshow('BGR image',cvBgrImg)
             cv2.waitKey()
+            cv2.destroyAllWindows()
 
         # saving images with opencv
         if saveColorImage:
@@ -282,6 +283,7 @@ def captureAverage( frameCount = 10, display=False, greyScale = False ):
     if display:
         cv2.imshow("Averaged over " + str(frameCount) + " frames",img)
         cv2.waitKey()
+        cv2.destroyAllWindows()
     return img
 
 def close():
