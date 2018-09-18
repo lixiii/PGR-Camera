@@ -208,17 +208,20 @@ def adjustShutter(maxIteration = 20, stepSize = 5, verbose = True, camAutoAdjust
 
     shutterValue = initShutter
     setShutter(initShutter)
+    sat = isSaturated()
 
     for i in range(maxIteration):
-        sat = isSaturated()
+        
         if sat:
             shutterValue = shutterValue - stepSize
             if shutterValue <= 0:
                 raise RuntimeError("Shutter value has exceeded minimum possible value. You can retry with a smaller step size. ")
                 break
             setShutter( shutterValue )
-            # Allow shutter settings to change
+            sat = isSaturated()
             printIterationStatus(i + 1, shutterValue, sat, verbose)
+            if sat == False:
+                break
         else:
             printIterationStatus(i + 1, shutterValue, sat, verbose)
             break
@@ -247,7 +250,7 @@ def autoAdjustShutter(iterationLimit = 100, verbose = True):
     autoAdjust()
     time.sleep(2)
     initGain = getGainValue()
-    initShutter = getShutterValue() * 0.7 # scale down a bit
+    initShutter = getShutterValue() * 0.7 # scale down a bit as the camera tends to over expose the image
     gainStep = (initGain - minGain) / 10
 
     while i < adjustLimit:
@@ -255,7 +258,7 @@ def autoAdjustShutter(iterationLimit = 100, verbose = True):
         newGain = setGain(initGain - gainStep * i)
         if verbose:
             print("Trying another iteration with gain: " + str( newGain ))
-        step = ( setShutter(initShutter) - 0.001 )/ 10
+        step = ( setShutter(initShutter) * 0.99 )/ 10 # Minimum shutter in each iteratioin = 1% of original shutter
         sat = adjustShutter(10, step, verbose, False)
         if sat == False:
             return False
